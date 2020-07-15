@@ -4,13 +4,13 @@
 // License text available at https://opensource.org/licenses/MIT
 
 import {AuthenticationComponent} from '@loopback/authentication';
+import {
+  JWTAuthenticationComponent,
+  TokenServiceBindings,
+} from '@loopback/authentication-jwt';
 import {AuthorizationComponent} from '@loopback/authorization';
 import {BootMixin} from '@loopback/boot';
-import {
-  ApplicationConfig,
-  BindingKey,
-  createBindingFromClass,
-} from '@loopback/core';
+import {ApplicationConfig, BindingKey} from '@loopback/core';
 import {
   model,
   property,
@@ -26,13 +26,7 @@ import {ServiceMixin} from '@loopback/service-proxy';
 import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
-import {JWTAuthenticationStrategy} from './authentication-strategies/jwt-strategy';
-import {
-  PasswordHasherBindings,
-  TokenServiceBindings,
-  TokenServiceConstants,
-  UserServiceBindings,
-} from './keys';
+import {PasswordHasherBindings, UserServiceBindings} from './keys';
 import {User} from './models';
 import {
   OrderRepository,
@@ -73,14 +67,15 @@ export class ShoppingApplication extends BootMixin(
   constructor(options?: ApplicationConfig) {
     super(options);
 
-    this.setUpBindings();
-
     // Bind authentication component related elements
     this.component(AuthenticationComponent);
+    this.component(JWTAuthenticationComponent);
     this.component(AuthorizationComponent);
 
-    // authentication
-    this.add(createBindingFromClass(JWTAuthenticationStrategy));
+    this.setUpBindings();
+
+    // // authentication
+    // this.add(createBindingFromClass(JWTAuthenticationStrategy));
 
     // Set up the custom sequence
     this.sequence(MyAuthenticationSequence);
@@ -110,19 +105,11 @@ export class ShoppingApplication extends BootMixin(
     // Bind package.json to the application context
     this.bind(PackageKey).to(pkg);
 
-    this.bind(TokenServiceBindings.TOKEN_SECRET).to(
-      TokenServiceConstants.TOKEN_SECRET_VALUE,
-    );
-
-    this.bind(TokenServiceBindings.TOKEN_EXPIRES_IN).to(
-      TokenServiceConstants.TOKEN_EXPIRES_IN_VALUE,
-    );
-
-    this.bind(TokenServiceBindings.TOKEN_SERVICE).toClass(JWTService);
-
-    // // Bind bcrypt hash services
+    // Bind bcrypt hash services
+    // WARNING: CHECK BINDINGS
     this.bind(PasswordHasherBindings.ROUNDS).to(10);
     this.bind(PasswordHasherBindings.PASSWORD_HASHER).toClass(BcryptHasher);
+    this.bind(TokenServiceBindings.TOKEN_SERVICE).toClass(JWTService);
 
     this.bind(UserServiceBindings.USER_SERVICE).toClass(MyUserService);
   }
